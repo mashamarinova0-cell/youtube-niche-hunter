@@ -1,0 +1,8 @@
+streamlit
+google-api-python-client
+pandas
+plotly
+isodate
+colorthief
+requests
+numpy
