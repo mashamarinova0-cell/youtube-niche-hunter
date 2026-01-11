@@ -5,20 +5,48 @@ import isodate
 from datetime import datetime, timedelta
 
 # --- КОНФИГУРАЦИЯ ---
-st.set_page_config(page_title="YouTube Pro Hunter", layout="wide", page_icon="🎯")
+st.set_page_config(page_title="YouTube Pro Hunter", layout="wide", page_icon="🚀")
 
-# --- CSS (МИНИМАЛИЗМ) ---
+# --- CSS (PRO STYLE) ---
 st.markdown("""
 <style>
-    .stMetric {background-color: #f0f2f6; padding: 10px; border-radius: 5px;}
-    .badge {padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 5px; background: #e2e3e5; color: #383d41;}
-    .big-date {font-weight: bold; color: #0068c9;}
+    /* Стиль для метрик */
+    .metric-box {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 8px 12px;
+        text-align: center;
+        font-size: 14px;
+        color: #212529;
+        margin-right: 5px;
+        display: inline-block;
+    }
+    .metric-label { font-size: 10px; color: #6c757d; text-transform: uppercase; }
+    .metric-val { font-weight: bold; font-size: 15px; }
+    
+    /* Ссылки */
+    a { text-decoration: none; color: #0366d6; font-weight: 600; }
+    a:hover { text-decoration: underline; }
+
+    /* Аватар канала */
+    .ch-avatar {
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        vertical-align: middle;
+        margin-right: 10px;
+        border: 1px solid #ddd;
+    }
+    
+    /* Бейджи */
+    .badge-viral { background: #d4edda; color: #155724; padding: 2px 6px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid #c3e6cb; }
+    .badge-date { color: #666; font-size: 13px; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
+# --- ФУНКЦИИ ---
 def parse_duration(iso_duration):
-    """Секунды из ISO формата"""
     try:
         dur = isodate.parse_duration(iso_duration)
         return dur.total_seconds()
@@ -26,58 +54,49 @@ def parse_duration(iso_duration):
         return 0
 
 def format_date_ru(date_str):
-    """Перевод даты в формат '25 декабря 2025'"""
     try:
         dt = datetime.strptime(date_str[:10], "%Y-%m-%d")
-        months = {
-            1: 'января', 2: 'февраля', 3: 'марта', 4: 'апреля', 5: 'мая', 6: 'июня',
-            7: 'июля', 8: 'августа', 9: 'сентября', 10: 'октября', 11: 'ноября', 12: 'декабря'
-        }
+        months = {1: 'янв', 2: 'фев', 3: 'мар', 4: 'апр', 5: 'мая', 6: 'июн', 7: 'июл', 8: 'авг', 9: 'сен', 10: 'окт', 11: 'ноя', 12: 'дек'}
         return f"{dt.day} {months[dt.month]} {dt.year}"
     except:
         return date_str
 
-def detect_content_type(title, tags):
-    """Определение типа контента"""
-    text = (title + " " + " ".join(tags)).lower()
-    types = []
-    if any(x in text for x in ['ai', 'gpt', 'midjourney', 'runway', 'neural', 'нейросет']):
-        types.append("🤖 AI")
-    if any(x in text for x in ['animation', 'cartoon', 'anime', 'анимаци', 'мульт']):
-        types.append("🎨 Анимация")
-    if any(x in text for x in ['shorts', '#shorts']):
-        types.append("📱 Shorts")
-    if any(x in text for x in ['asmr', 'асмр']):
-        types.append("🎧 ASMR")
-    return types
+def format_number(num):
+    if num >= 1_000_000: return f"{num/1_000_000:.1f}M"
+    if num >= 1_000: return f"{num/1_000:.1f}K"
+    return str(num)
 
 # --- БОКОВАЯ ПАНЕЛЬ ---
-st.sidebar.header("⚙️ Настройки")
-api_key = st.sidebar.text_input("YouTube API Key", type="password")
-st.sidebar.divider()
-query = st.sidebar.text_input("Ниша / Запрос", "Заработок на нейросетях")
-region = st.sidebar.selectbox("Страна поиска", ["RU", "US", "GB", "DE", "KZ", "UA", "BY"], index=0)
-video_type = st.sidebar.radio("Формат", ["Все", "Shorts (< 60 сек)", "Длинные (> 60 сек)"])
-date_filter = st.sidebar.selectbox("Когда загружено", ["За сегодня", "За неделю", "За месяц", "За все время"])
-st.sidebar.divider()
-min_views = st.sidebar.number_input("Мин. просмотров", value=1000, step=1000)
+with st.sidebar:
+    st.header("🚀 PRO Настройки")
+    api_key = st.text_input("YouTube API Key", type="password")
+    
+    st.subheader("🔍 Поиск")
+    query = st.text_input("Ниша", "Минимализм")
+    region = st.selectbox("🌍 Страна поиска", ["RU", "US", "GB", "KZ", "UA", "BY", "DE"], index=0)
+    
+    st.subheader("⚙️ Фильтры")
+    video_type = st.radio("Формат", ["Все", "Длинные (> 1 мин)", "Shorts (< 1 мин)"])
+    date_filter = st.selectbox("Дата загрузки", ["За месяц", "За неделю", "За сегодня", "За все время"])
+    min_views = st.number_input("Мин. просмотров", 1000, step=5000)
+    
+    st.info("💡 Совет: Для поиска вирусных видео выбирайте 'За месяц'.")
 
-# Логика даты для API
 days_map = {"За сегодня": 1, "За неделю": 7, "За месяц": 30, "За все время": 365}
 days_ago = days_map[date_filter]
 
-# --- ОСНОВНОЙ ЭКРАН ---
-st.title(f"🔎 Поиск: {query}")
+# --- ГЛАВНЫЙ ЭКРАН ---
+st.title(f"Анализ ниши: {query}")
 
-if st.button("НАЙТИ 🚀", type="primary"):
+if st.button("ЗАПУСТИТЬ СКАНЕР 🔥", type="primary"):
     if not api_key:
-        st.error("Введите API Key!")
+        st.error("❌ Введите API Key")
     else:
-        with st.spinner('Поиск данных...'):
+        with st.spinner('Сбор данных... Анализ каналов...'):
             try:
                 youtube = build('youtube', 'v3', developerKey=api_key)
                 
-                # 1. ЗАПРОС К API
+                # 1. ПОИСК
                 pub_after = (datetime.now() - timedelta(days=days_ago)).isoformat("T") + "Z"
                 
                 search_res = youtube.search().list(
@@ -91,9 +110,10 @@ if st.button("НАЙТИ 🚀", type="primary"):
                     st.warning("Ничего не найдено.")
                     st.stop()
 
-                # 2. ДЕТАЛИ ВИДЕО И КАНАЛОВ
+                # 2. ДЕТАЛИ ВИДЕО
                 vid_res = youtube.videos().list(part="statistics,snippet,contentDetails", id=','.join(ids)).execute()
                 
+                # 3. ДЕТАЛИ КАНАЛОВ (Аватарки + Дата создания)
                 ch_ids = list(set([v['snippet']['channelId'] for v in vid_res['items']]))
                 ch_res = youtube.channels().list(part="statistics,snippet", id=','.join(ch_ids[:50])).execute()
                 
@@ -101,119 +121,89 @@ if st.button("НАЙТИ 🚀", type="primary"):
                 for c in ch_res['items']:
                     ch_data[c['id']] = {
                         'subs': int(c['statistics'].get('subscriberCount', 0)),
-                        'created': c['snippet']['publishedAt']
+                        'created': c['snippet']['publishedAt'],
+                        'avatar': c['snippet']['thumbnails']['default']['url'],
+                        'customUrl': c['snippet'].get('customUrl', f"channel/{c['id']}")
                     }
 
-                # 3. ОБРАБОТКА
-                videos = []
-                channels_stats = {}
-
+                # 4. ОБРАБОТКА ДАННЫХ
+                data = []
                 for v in vid_res['items']:
                     snip = v['snippet']
                     stats = v['statistics']
                     ch_id = snip['channelId']
                     
-                    # Фильтр просмотров
+                    # Фильтры
                     views = int(stats.get('viewCount', 0))
                     if views < min_views: continue
-
-                    # Фильтр длительности
+                    
                     dur_sec = parse_duration(v['contentDetails']['duration'])
                     is_short = dur_sec <= 60
                     
-                    if video_type == "Shorts (< 60 сек)" and not is_short: continue
-                    if video_type == "Длинные (> 60 сек)" and is_short: continue
+                    if video_type == "Длинные (> 1 мин)" and is_short: continue
+                    if video_type == "Shorts (< 1 мин)" and not is_short: continue
 
                     # Данные канала
-                    ch_info = ch_data.get(ch_id, {'subs': 0, 'created': '2000-01-01'})
-                    viral = round(views / ch_info['subs'], 2) if ch_info['subs'] > 0 else 0
+                    ch_info = ch_data.get(ch_id, {'subs': 1, 'created': '2000-01-01', 'avatar': '', 'customUrl': ''})
                     
-                    # Сбор статистики канала
-                    if ch_id not in channels_stats:
-                        channels_stats[ch_id] = {
-                            'title': snip['channelTitle'],
-                            'subs': ch_info['subs'],
-                            'created_raw': ch_info['created'],
-                            'video_count_in_search': 0,
-                            'total_views': 0
-                        }
-                    channels_stats[ch_id]['video_count_in_search'] += 1
-                    channels_stats[ch_id]['total_views'] += views
-
-                    tags = snip.get('tags', [])
+                    # Виральность
+                    viral = round(views / ch_info['subs'], 1) if ch_info['subs'] > 0 else 0
                     
-                    videos.append({
-                        'id': v['id'],
+                    # Правильная картинка (Max resolution для длинных)
+                    thumb = snip['thumbnails'].get('maxres', snip['thumbnails'].get('high', snip['thumbnails']['medium']))['url']
+                    
+                    data.append({
                         'title': snip['title'],
-                        'thumb': snip['thumbnails']['high']['url'],
+                        'thumb': thumb,
                         'views': views,
                         'likes': int(stats.get('likeCount', 0)),
-                        'date_ru': format_date_ru(snip['publishedAt']),
-                        'time': snip['publishedAt'][11:16],
+                        'date_video': format_date_ru(snip['publishedAt']),
                         'duration': "Shorts" if is_short else f"{int(dur_sec//60)}:{int(dur_sec%60):02d}",
-                        'channel': snip['channelTitle'],
                         'viral': viral,
-                        'tags': tags,
-                        'types': detect_content_type(snip['title'], tags)
+                        'link_video': f"https://youtu.be/{v['id']}",
+                        # Данные канала
+                        'ch_name': snip['channelTitle'],
+                        'ch_avatar': ch_info['avatar'],
+                        'ch_subs': ch_info['subs'],
+                        'ch_created': format_date_ru(ch_info['created']),
+                        'ch_link': f"https://www.youtube.com/{ch_info['customUrl']}" if '@' in ch_info['customUrl'] else f"https://www.youtube.com/channel/{ch_id}"
                     })
 
-                df = pd.DataFrame(videos)
-                if df.empty:
-                    st.warning("Нет видео под выбранные фильтры.")
-                    st.stop()
+                # --- ВЫВОД В СТИЛЕ СПИСКА (PRO LIST) ---
+                st.markdown(f"### Результаты ({len(data)} шт.)")
                 
-                df = df.sort_values(by='views', ascending=False)
-
-                # --- ВЫВОД ---
-                tab1, tab2 = st.tabs(["📹 Список Видео", "📢 Каналы"])
-
-                with tab1:
-                    st.caption(f"Найдено: {len(df)} шт.")
-                    # Сетка по 2
-                    for i in range(0, len(df), 2):
-                        cols = st.columns(2)
-                        batch = df.iloc[i:i+2]
-                        for idx, row in batch.iterrows():
-                            c_idx = 0 if idx == batch.index[0] else 1
-                            with cols[c_idx]:
-                                st.image(row['thumb'], use_container_width=True)
-                                st.markdown(f"#### [{row['title']}](https://youtu.be/{row['id']})")
-                                
-                                # Бейджи
-                                if row['types']:
-                                    st.markdown(" ".join([f"<span class='badge'>{t}</span>" for t in row['types']]), unsafe_allow_html=True)
-                                
-                                st.markdown(f"""
-                                **👀 {row['views']:,}** | 👍 {row['likes']:,} | ⏱ {row['duration']}
-                                <br>📅 Дата выхода: **{row['date_ru']}**
-                                <br>👤 Канал: **{row['channel']}**
-                                """, unsafe_allow_html=True)
-                                
-                                if row['viral'] > 1.5:
-                                    st.success(f"🚀 Виральность: {row['viral']}x (Выше нормы)")
-                                
-                                with st.expander("Теги видео"):
-                                    st.write(", ".join(row['tags']) if row['tags'] else "Нет тегов")
-                                st.divider()
-
-                with tab2:
-                    st.write("Авторы, попавшие в поиск:")
-                    ch_df = pd.DataFrame(channels_stats.values()).sort_values(by='total_views', ascending=False)
-                    
-                    for _, ch in ch_df.iterrows():
-                        # Дата создания канала красиво
-                        created_ru = format_date_ru(ch['created_raw'])
+                for row in data:
+                    with st.container():
+                        # Разметка: Картинка (1 часть) | Инфо (3 части)
+                        c1, c2 = st.columns([1, 2])
                         
-                        with st.container():
-                            cc1, cc2 = st.columns([1, 4])
-                            with cc2:
-                                st.subheader(ch['title'])
-                                st.markdown(f"""
-                                📅 **Дата создания канала:** <span class='big-date'>{created_ru}</span>
-                                <br>👥 Подписчиков: **{ch['subs']:,}**
-                                <br>🔥 Видео в этом поиске: **{ch['video_count_in_search']}** (Просмотров: {ch['total_views']:,})
-                                """, unsafe_allow_html=True)
-                            st.divider()
+                        with c1:
+                            # Обложка видео
+                            st.image(row['thumb'], use_container_width=True)
+                            
+                        with c2:
+                            # Заголовок
+                            st.markdown(f"#### [{row['title']}]({row['link_video']})")
+                            
+                            # Метрики (Блоки)
+                            st.markdown(f"""
+                            <div class="metric-box"><div class="metric-label">Просмотры</div><div class="metric-val">{format_number(row['views'])}</div></div>
+                            <div class="metric-box"><div class="metric-label">Виральность</div><div class="metric-val" style="color: {'green' if row['viral']>1 else 'black'}">{row['viral']}x</div></div>
+                            <div class="metric-box"><div class="metric-label">Длительность</div><div class="metric-val">{row['duration']}</div></div>
+                            <div class="metric-box"><div class="metric-label">Дата выхода</div><div class="metric-val">{row['date_video']}</div></div>
+                            """, unsafe_allow_html=True)
+                            
+                            st.write("") # Отступ
+                            
+                            # Блок Канала (Аватар + Имя + Дата)
+                            st.markdown(f"""
+                            <img src="{row['ch_avatar']}" class="ch-avatar">
+                            <a href="{row['ch_link']}" target="_blank">{row['ch_name']}</a> 
+                            <span style="color: #666; font-size: 14px;"> • {format_number(row['ch_subs'])} подп.</span>
+                            <br><span class="badge-date" style="margin-left: 54px;">📅 Канал создан: {row['ch_created']}</span>
+                            """, unsafe_allow_html=True)
+                        
+                        st.divider()
 
             except Exception as e:
                 st.error(f"Ошибка: {e}")
