@@ -5,115 +5,220 @@ import isodate
 from datetime import datetime, timedelta
 
 # --- КОНФИГУРАЦИЯ ---
-st.set_page_config(page_title="YouTube Pro Hunter", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Vidx Hunter Clone", layout="wide", page_icon="⚡")
 
-# --- CSS (PRO STYLE) ---
+# --- CSS (CLEAN VIDX STYLE) ---
 st.markdown("""
 <style>
-    /* Стиль для метрик */
-    .metric-box {
-        background-color: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
-        padding: 8px 12px;
-        text-align: center;
-        font-size: 14px;
-        color: #212529;
-        margin-right: 5px;
-        display: inline-block;
-    }
-    .metric-label { font-size: 10px; color: #6c757d; text-transform: uppercase; }
-    .metric-val { font-weight: bold; font-size: 15px; }
+    /* Фон */
+    .stApp { background-color: #f8fafc; }
     
-    /* Ссылки */
-    a { text-decoration: none; color: #0366d6; font-weight: 600; }
-    a:hover { text-decoration: underline; }
+    /* Карточка */
+    .vidx-card {
+        background-color: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 0;
+        margin-bottom: 20px;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        transition: transform 0.2s;
+    }
+    .vidx-card:hover { border-color: #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
 
-    /* Аватар канала */
-    .ch-avatar {
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        vertical-align: middle;
-        margin-right: 10px;
-        border: 1px solid #ddd;
+    /* Контейнер карточки */
+    .card-flex { display: flex; flex-wrap: wrap; }
+    
+    /* Левая часть (Превью) */
+    .card-thumb {
+        width: 360px;
+        min-width: 360px;
+        height: 202px; /* 16:9 aspect ratio fix */
+        position: relative;
+    }
+    .card-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
     }
     
-    /* Бейджи */
-    .badge-viral { background: #d4edda; color: #155724; padding: 2px 6px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid #c3e6cb; }
-    .badge-date { color: #666; font-size: 13px; }
+    /* Длительность на превью */
+    .dur-badge {
+        position: absolute;
+        bottom: 8px;
+        right: 8px;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    /* Правая часть (Инфо) */
+    .card-info {
+        padding: 16px 20px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    /* Заголовок */
+    .vid-title a {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1e293b;
+        text-decoration: none;
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .vid-title a:hover { color: #3b82f6; }
+
+    /* Метрики (Pills) */
+    .meta-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .pill {
+        background: #f1f5f9;
+        color: #475569;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .pill.green { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .pill.blue { background: #dbeafe; color: #1e40af; }
+
+    /* Канал */
+    .channel-row {
+        display: flex;
+        align-items: center;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #f1f5f9;
+    }
+    .ch-avatar { width: 40px; height: 40px; border-radius: 50%; margin-right: 12px; border: 1px solid #e2e8f0;}
+    .ch-name { font-weight: 700; color: #334155; font-size: 14px; }
+    .ch-stats { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+    @media (max-width: 768px) {
+        .card-thumb { width: 100%; min-width: 100%; height: auto; }
+        .card-img { border-radius: 12px 12px 0 0; aspect-ratio: 16/9; }
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # --- ФУНКЦИИ ---
-def parse_duration(iso_duration):
+def parse_duration_sec(iso_duration):
     try:
         dur = isodate.parse_duration(iso_duration)
-        return dur.total_seconds()
+        return int(dur.total_seconds())
     except:
         return 0
 
-def format_date_ru(date_str):
-    try:
-        dt = datetime.strptime(date_str[:10], "%Y-%m-%d")
-        months = {1: 'янв', 2: 'фев', 3: 'мар', 4: 'апр', 5: 'мая', 6: 'июн', 7: 'июл', 8: 'авг', 9: 'сен', 10: 'окт', 11: 'ноя', 12: 'дек'}
-        return f"{dt.day} {months[dt.month]} {dt.year}"
-    except:
-        return date_str
+def format_duration(sec):
+    m = sec // 60
+    s = sec % 60
+    return f"{m}:{s:02d}"
 
-def format_number(num):
+def format_num(num):
     if num >= 1_000_000: return f"{num/1_000_000:.1f}M"
     if num >= 1_000: return f"{num/1_000:.1f}K"
     return str(num)
 
-# --- БОКОВАЯ ПАНЕЛЬ ---
+def time_ago(date_str):
+    try:
+        dt = datetime.strptime(date_str[:10], "%Y-%m-%d")
+        delta = datetime.now() - dt
+        if delta.days == 0: return "Сегодня"
+        if delta.days == 1: return "Вчера"
+        if delta.days < 30: return f"{delta.days} дн. назад"
+        return f"{delta.days // 30} мес. назад"
+    except:
+        return date_str
+
+# --- SIDEBAR (ФИЛЬТРЫ КАК В VIDX) ---
 with st.sidebar:
-    st.header("🚀 PRO Настройки")
+    st.header("⚡ Vidx Filters")
     api_key = st.text_input("YouTube API Key", type="password")
     
-    st.subheader("🔍 Поиск")
-    query = st.text_input("Ниша", "Минимализм")
-    region = st.selectbox("🌍 Страна поиска", ["RU", "US", "GB", "KZ", "UA", "BY", "DE"], index=0)
+    st.subheader("1. Поиск")
+    query_raw = st.text_input("Ключевое слово", "Minecraft")
     
-    st.subheader("⚙️ Фильтры")
-    video_type = st.radio("Формат", ["Все", "Длинные (> 1 мин)", "Shorts (< 1 мин)"])
-    date_filter = st.selectbox("Дата загрузки", ["За месяц", "За неделю", "За сегодня", "За все время"])
-    min_views = st.number_input("Мин. просмотров", 1000, step=5000)
+    # ПРЕСЕТЫ FACELESS
+    niche_preset = st.selectbox("Тип ниши (Presets)", 
+        ["🌐 Любая", "👤 Faceless (Без лица)", "🎮 Гейминг", "🧘 Медитация/ASMR", "🤖 AI Content"])
     
-    st.info("💡 Совет: Для поиска вирусных видео выбирайте 'За месяц'.")
+    # Логика пресетов (добавляем слова в поиск)
+    query = query_raw
+    if niche_preset == "👤 Faceless (Без лица)":
+        query += " (tutorial|animation|compilation|no talking|satisfying)"
+    elif niche_preset == "🧘 Медитация/ASMR":
+        query += " (asmr|relaxing|meditation|sleep)"
+    elif niche_preset == "🤖 AI Content":
+        query += " (ai|chatgpt|midjourney|neural)"
 
-days_map = {"За сегодня": 1, "За неделю": 7, "За месяц": 30, "За все время": 365}
+    region_ui = st.selectbox("Регион", ["🌍 Global", "🇺🇸 USA", "🇷🇺 Russia", "🇩🇪 Germany"])
+    
+    st.subheader("2. Метрики (Sliders)")
+    # Ползунки как в Vidx
+    min_views = st.slider("Мин. Просмотров", 1000, 500_000, 10_000, step=1000)
+    
+    # Диапазон подписчиков (эмуляция, фильтруем после запроса)
+    subs_range = st.slider("Подписчики канала (Range)", 0, 10_000_000, (1000, 500_000))
+    
+    # Длительность
+    dur_range = st.slider("Длительность (мин)", 0, 60, (2, 20))
+    
+    # Дата
+    date_filter = st.selectbox("Дата загрузки", ["За 30 дней", "За 7 дней", "За 24 часа", "За год"])
+
+# Логика даты
+days_map = {"За 24 часа": 1, "За 7 дней": 7, "За 30 дней": 30, "За год": 365}
 days_ago = days_map[date_filter]
+if "Global" in region_ui: region_code = None
+else: region_code = region_ui.split(" ")[1]
 
-# --- ГЛАВНЫЙ ЭКРАН ---
-st.title(f"Анализ ниши: {query}")
+# --- MAIN ---
+st.title(f"Результаты: {query_raw} {'(Faceless Mode)' if 'Faceless' in niche_preset else ''}")
 
-if st.button("ЗАПУСТИТЬ СКАНЕР 🔥", type="primary"):
+if st.button("Найти Аномалии (Outliers) 🔎", type="primary"):
     if not api_key:
-        st.error("❌ Введите API Key")
+        st.error("Введите API Key")
     else:
-        with st.spinner('Сбор данных... Анализ каналов...'):
+        with st.spinner('Сканируем базу... Применяем Faceless фильтры...'):
             try:
                 youtube = build('youtube', 'v3', developerKey=api_key)
                 
-                # 1. ПОИСК
+                # 1. SEARCH
                 pub_after = (datetime.now() - timedelta(days=days_ago)).isoformat("T") + "Z"
                 
-                search_res = youtube.search().list(
-                    q=query, part="id,snippet", maxResults=50, 
-                    order="viewCount", type="video", 
-                    publishedAfter=pub_after, regionCode=region
-                ).execute()
+                search_params = {
+                    'q': query,
+                    'part': "id,snippet",
+                    'maxResults': 50,
+                    'order': "viewCount",
+                    'type': "video",
+                    'publishedAfter': pub_after
+                }
+                if region_code: search_params['regionCode'] = region_code
                 
+                search_res = youtube.search().list(**search_params).execute()
                 ids = [i['id']['videoId'] for i in search_res['items']]
+                
                 if not ids:
                     st.warning("Ничего не найдено.")
                     st.stop()
 
-                # 2. ДЕТАЛИ ВИДЕО
+                # 2. DETAILS
                 vid_res = youtube.videos().list(part="statistics,snippet,contentDetails", id=','.join(ids)).execute()
                 
-                # 3. ДЕТАЛИ КАНАЛОВ (Аватарки + Дата создания)
                 ch_ids = list(set([v['snippet']['channelId'] for v in vid_res['items']]))
                 ch_res = youtube.channels().list(part="statistics,snippet", id=','.join(ch_ids[:50])).execute()
                 
@@ -121,89 +226,98 @@ if st.button("ЗАПУСТИТЬ СКАНЕР 🔥", type="primary"):
                 for c in ch_res['items']:
                     ch_data[c['id']] = {
                         'subs': int(c['statistics'].get('subscriberCount', 0)),
-                        'created': c['snippet']['publishedAt'],
                         'avatar': c['snippet']['thumbnails']['default']['url'],
-                        'customUrl': c['snippet'].get('customUrl', f"channel/{c['id']}")
+                        'created': c['snippet']['publishedAt'][:10]
                     }
 
-                # 4. ОБРАБОТКА ДАННЫХ
+                # 3. FILTERING & LOGIC
                 data = []
                 for v in vid_res['items']:
-                    snip = v['snippet']
                     stats = v['statistics']
+                    snip = v['snippet']
                     ch_id = snip['channelId']
                     
-                    # Фильтры
+                    # Фильтр просмотров
                     views = int(stats.get('viewCount', 0))
                     if views < min_views: continue
                     
-                    dur_sec = parse_duration(v['contentDetails']['duration'])
-                    is_short = dur_sec <= 60
+                    # Фильтр длительности
+                    sec = parse_duration_sec(v['contentDetails']['duration'])
+                    mins = sec / 60
+                    if mins < dur_range[0] or mins > dur_range[1]: continue
                     
-                    if video_type == "Длинные (> 1 мин)" and is_short: continue
-                    if video_type == "Shorts (< 1 мин)" and not is_short: continue
-
                     # Данные канала
-                    ch_info = ch_data.get(ch_id, {'subs': 1, 'created': '2000-01-01', 'avatar': '', 'customUrl': ''})
+                    ch_info = ch_data.get(ch_id, {'subs': 0, 'avatar': '', 'created': ''})
+                    subs = ch_info['subs']
                     
-                    # Виральность
-                    viral = round(views / ch_info['subs'], 1) if ch_info['subs'] > 0 else 0
+                    # Фильтр подписчиков (ВАЖНО ДЛЯ VIDX)
+                    if subs < subs_range[0] or subs > subs_range[1]: continue
                     
-                    # Правильная картинка (Max resolution для длинных)
-                    thumb = snip['thumbnails'].get('maxres', snip['thumbnails'].get('high', snip['thumbnails']['medium']))['url']
+                    # Outlier Score
+                    outlier = round(views / subs, 1) if subs > 0 else 0
+                    
+                    thumb = snip['thumbnails'].get('maxres', snip['thumbnails'].get('high'))['url']
                     
                     data.append({
+                        'id': v['id'],
                         'title': snip['title'],
                         'thumb': thumb,
+                        'duration': format_duration(sec),
                         'views': views,
-                        'likes': int(stats.get('likeCount', 0)),
-                        'date_video': format_date_ru(snip['publishedAt']),
-                        'duration': "Shorts" if is_short else f"{int(dur_sec//60)}:{int(dur_sec%60):02d}",
-                        'viral': viral,
-                        'link_video': f"https://youtu.be/{v['id']}",
-                        # Данные канала
+                        'ago': time_ago(snip['publishedAt']),
+                        'outlier': outlier,
                         'ch_name': snip['channelTitle'],
                         'ch_avatar': ch_info['avatar'],
-                        'ch_subs': ch_info['subs'],
-                        'ch_created': format_date_ru(ch_info['created']),
-                        'ch_link': f"https://www.youtube.com/{ch_info['customUrl']}" if '@' in ch_info['customUrl'] else f"https://www.youtube.com/channel/{ch_id}"
+                        'ch_subs': subs,
+                        'ch_created': ch_info['created']
                     })
-
-                # --- ВЫВОД В СТИЛЕ СПИСКА (PRO LIST) ---
-                st.markdown(f"### Результаты ({len(data)} шт.)")
                 
+                # Сортировка: сначала самые аномальные (высокий Outlier Score)
+                data.sort(key=lambda x: x['outlier'], reverse=True)
+                
+                if not data:
+                    st.warning("Нет видео под эти фильтры. Попробуйте расширить диапазон подписчиков или длительности.")
+                    st.stop()
+
+                st.success(f"Найдено {len(data)} видео (Отсортировано по Outlier Score)")
+
+                # --- ОТРИСОВКА КАРТОЧЕК ---
                 for row in data:
-                    with st.container():
-                        # Разметка: Картинка (1 часть) | Инфо (3 части)
-                        c1, c2 = st.columns([1, 2])
-                        
-                        with c1:
-                            # Обложка видео
-                            st.image(row['thumb'], use_container_width=True)
-                            
-                        with c2:
-                            # Заголовок
-                            st.markdown(f"#### [{row['title']}]({row['link_video']})")
-                            
-                            # Метрики (Блоки)
-                            st.markdown(f"""
-                            <div class="metric-box"><div class="metric-label">Просмотры</div><div class="metric-val">{format_number(row['views'])}</div></div>
-                            <div class="metric-box"><div class="metric-label">Виральность</div><div class="metric-val" style="color: {'green' if row['viral']>1 else 'black'}">{row['viral']}x</div></div>
-                            <div class="metric-box"><div class="metric-label">Длительность</div><div class="metric-val">{row['duration']}</div></div>
-                            <div class="metric-box"><div class="metric-label">Дата выхода</div><div class="metric-val">{row['date_video']}</div></div>
-                            """, unsafe_allow_html=True)
-                            
-                            st.write("") # Отступ
-                            
-                            # Блок Канала (Аватар + Имя + Дата)
-                            st.markdown(f"""
-                            <img src="{row['ch_avatar']}" class="ch-avatar">
-                            <a href="{row['ch_link']}" target="_blank">{row['ch_name']}</a> 
-                            <span style="color: #666; font-size: 14px;"> • {format_number(row['ch_subs'])} подп.</span>
-                            <br><span class="badge-date" style="margin-left: 54px;">📅 Канал создан: {row['ch_created']}</span>
-                            """, unsafe_allow_html=True)
-                        
-                        st.divider()
+                    # Стиль бейджа
+                    outlier_style = "green" if row['outlier'] >= 2.0 else "blue"
+                    outlier_icon = "🔥" if row['outlier'] >= 5.0 else "📈"
+                    
+                    st.markdown(f"""
+                    <div class="vidx-card">
+                        <div class="card-flex">
+                            <div class="card-thumb">
+                                <img src="{row['thumb']}" class="card-img">
+                                <div class="dur-badge">{row['duration']}</div>
+                            </div>
+                            <div class="card-info">
+                                <div class="vid-title">
+                                    <a href="https://youtu.be/{row['id']}" target="_blank">{row['title']}</a>
+                                </div>
+                                
+                                <div class="meta-row">
+                                    <span class="pill">👀 {format_num(row['views'])}</span>
+                                    <span class="pill">⏱ {row['ago']}</span>
+                                    <span class="pill {outlier_style}">{outlier_icon} Score: {row['outlier']}x</span>
+                                </div>
+                                
+                                <div class="channel-row">
+                                    <img src="{row['ch_avatar']}" class="ch-avatar">
+                                    <div>
+                                        <div class="ch-name">{row['ch_name']}</div>
+                                        <div class="ch-stats">
+                                            👥 {format_num(row['ch_subs'])} • Создан: {row['ch_created']}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
             except Exception as e:
-                st.error(f"Ошибка: {e}")
+                st.error(f"Ошибка API: {e}")
